@@ -22,27 +22,13 @@ interface State {
 
 type Action =
   | { type: "SET_CHANNEL"; channel: string }
-  | { type: "ADD_MESSAGE"; message: ChatMessage };
+  | { type: "ADD_MESSAGE"; message: ChatMessage;};
 
 
   const initialState: State = {
   channels: ["#Flödet", "Ledning", "Fält", "Samordning", "#4242"],
   activeChannel: "#Flödet",
   messages: [
-    {
-      id: "1",
-      timestamp: Date.now(),
-      type: "observation",
-      channel: "#Flödet",
-      text: "Strömavbrott hela Sätra",
-    },
-    {
-      id: "2",
-      timestamp: Date.now(),
-      type: "beslut",
-      channel: "#Flödet",
-      text: "Prioritera äldrevård #4242",
-    },
   ],
 };
 
@@ -66,20 +52,22 @@ const colorMap: Record<MessageType, string> = {
 };
 
 function parseCommand(input: string, channel: string): ChatMessage | null {
+  
   if (!input.startsWith("@")) return null;
-
+  
   const [cmd, ...rest] = input.slice(1).split(" ");
   const text = rest.join(" ");
-
+  
   const typeMap: Record<string, MessageType> = {
     obs: "observation",
     bes: "beslut",
     issue: "uppdatering",
   };
-
+  
   const type = typeMap[cmd];
   if (!type) return null;
-
+  connection.invoke("SendMessage", type, input, channel)
+  
   return {
     id: crypto.randomUUID(),
     timestamp: Date.now(),
@@ -89,10 +77,13 @@ function parseCommand(input: string, channel: string): ChatMessage | null {
   };
 }
 
-
 export default function EmergencyChat() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [input, setInput] = useState("");
+
+  if (!state.activeChannel) {
+    return;
+  }
 
   const visibleMessages = state.messages.filter(
     (m) => m.channel === state.activeChannel
@@ -103,9 +94,8 @@ export default function EmergencyChat() {
       .then(() => console.log("SignalR connected"))
       .catch(console.error);
 
-    connection.on("ReceiveMessage", (user, message) => {
-      //setMessages(prev => [...prev, `${user}: ${message}`]);
-      console.log("Received message:", user, message);
+    connection.on("ReceiveMessage", (message) => {
+      dispatch({ type: "ADD_MESSAGE", message: message});
     });
 
     return () => {
@@ -118,7 +108,7 @@ export default function EmergencyChat() {
     e.preventDefault();
     const msg = parseCommand(input, state.activeChannel);
     if (msg) {
-      dispatch({ type: "ADD_MESSAGE", message: msg });
+      dispatch({ type: "ADD_MESSAGE", message: msg});
     }
 
     setInput("");
