@@ -29,6 +29,9 @@ project.fragment.lock.json
 artifacts/
 .vs/
 
+# Database
+ backend/WebApplication1/database/ember*
+
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 
