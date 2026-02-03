@@ -206,7 +206,7 @@ export default function EmergencyChat() {
         >
           <div className="flex gap-2 mb-2">
             {[
-              { label: "OBS", prefix: "@obs " },
+              { label: "OBSERVATION", prefix: "@obs " },
               { label: "BESLUT", prefix: "@bes " },
               { label: "STATUS", prefix: "@upp " },
             ].map((btn) => (
