@@ -1,12 +1,15 @@
 using WebApplication1;
 using Microsoft.EntityFrameworkCore;
 using Business.Data;
+using Business.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+builder.Services.AddTransient<IssueService>();
 
 // Configure Entity Framework with SQLite
 builder.Services.AddDbContext<EmberDbContext>(options =>
@@ -16,7 +19,12 @@ builder.Services.AddDbContext<EmberDbContext>(options =>
     options.UseSqlite(connectionString);
 });
 
-builder.Services.AddOpenApi();
+// Swagger/Swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo { Title = "My API", Version = "v1" });
+});
 builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
@@ -36,7 +44,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 using (var scope = app.Services.CreateScope())
