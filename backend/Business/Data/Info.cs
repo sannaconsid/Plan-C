@@ -18,6 +18,9 @@ public class Info
     public int Id { get; set; }
 
     [Required]
+    public int TypeId { get; set; }
+
+    [Required]
     public InfoType Type { get; set; } = null!;
 
     [Required]

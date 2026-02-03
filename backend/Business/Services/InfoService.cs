@@ -19,6 +19,7 @@ namespace Business.Services
                 InfoText = issueDto.Text,
                 InfoTime = DateTime.UtcNow,
                 IssueId = issueDto.IssueId,
+                TypeId = 1
             };
 
             dbContext.Infos.Add(info);
