@@ -17,11 +17,6 @@ public class EmberDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configure simple relationships if needed
-        modelBuilder.Entity<Issue>()
-            .HasOne(i => i.State);
 
-        modelBuilder.Entity<Issue>()
-            .HasOne(i => i.Info);
     }
 }

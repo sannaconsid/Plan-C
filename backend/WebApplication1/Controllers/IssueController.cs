@@ -14,7 +14,7 @@ namespace EmberWebApi.Controllers
         {
             var issues = await dbContext.Issues
                 .Include(i => i.State)
-                .Include(i => i.Info)
+                .Include(i => i.Infos)
                 .ToListAsync();
             return new OkObjectResult(issues);
         }

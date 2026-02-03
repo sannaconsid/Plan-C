@@ -20,7 +20,8 @@ public class Issue
     public string Name { get; set; } = string.Empty;
 
     public string State { get; set; } = null!;
-    public List<Info> Info { get; set; } = [];
+
+    public List<Info> Infos { get; set; } = [];
 
     public string Description { get; set; } = string.Empty;
 
