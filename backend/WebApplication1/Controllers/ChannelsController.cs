@@ -10,7 +10,6 @@ namespace WebApplication1.Controllers
     {
         private static readonly List<string> ChannelList = new()
         {
-            "#Flödet",
             "Ledning",
             "Samordning",
             "Fält"
