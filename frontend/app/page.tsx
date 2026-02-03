@@ -134,6 +134,25 @@ export default function EmergencyChat() {
     fetchChannels();
   }, []);
 
+  useEffect(() => {
+    const fetchIssues = async () => {
+      try {
+        const res = await fetch(`${adress}issue`);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch issues: ${res.status} ${res.statusText}`);
+        }
+        const issues: ChatMessage[] = await res.json();
+        issues.forEach((issue) => {
+          dispatch({ type: "ADD_MESSAGE", message: issue });
+        });
+      } catch (e) {
+        console.error("Failed to fetch issues: ", e);
+      }
+    };
+
+    fetchIssues();
+  }, []);
+
 
   function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -173,23 +192,23 @@ export default function EmergencyChat() {
       <main className="flex flex-col flex-1">
         <div className="border-b border-zinc-700 px-4 py-2 font-bold">
           {state.activeChannel}
-
-          <button 
+          <button
             onClick={async () => {
-              const name = prompt("Ärende-namn:");
-              if (name) {
-                try {
-                  await fetch(`${adress}issues?name=${encodeURIComponent(name)}`, { method: 'POST' });
-                } catch (e) {
-                  console.error("Failed to create channel", e);
-                }
-              }
-            }}
-            className="text-xs bg-zinc-700 hover:bg-zinc-600 px-1 rounded"
-          > +  Nytt Ärende</button>
+              const title = prompt("Ärende-namn:");
+              if (!title) return;
 
+              await fetch(`${adress}issue`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ title })
+              });
+            }} className="text-xs bg-zinc-700 hover:bg-zinc-600 px-1 rounded"
+          >
+            + Nytt Ärende
+          </button>
         </div>
-
         <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
           {visibleMessages.map((m) => (
             <div key={m.id} className={colorMap[m.type]}>
