@@ -1,27 +1,42 @@
 "use client";
 
-import { useReducer, useState, useEffect, FormEvent, useRef } from "react";
+import { useReducer, useState, useEffect, FormEvent, useRef, MouseEvent } from "react";
 import { createConnection } from "./connection";
 
 type MessageType = "observation" | "beslut" | "uppdatering" | "system";
 const adress = "https://localhost:7298/api/";
 
+// A message now belongs to an issue
 interface ChatMessage {
   id: string;
   timestamp: number;
   type: MessageType;
   channel: string;
+  issueId: string; // New field
   text: string;
+}
+
+// Represents an issue, which will be a "card"
+interface Issue {
+  id: string;
+  title: string;
+  state: string;
+  info: any[];
 }
 
 interface State {
   channels: string[];
   activeChannel: string;
   messages: ChatMessage[];
+  issues: Issue[];
+  activeIssueId: string | null;
 }
 
 type Action =
   | { type: "SET_CHANNELS"; channels: string[] }
+  | { type: "SET_ISSUES"; issues: Issue[] }
+  | { type: "ADD_ISSUE"; issue: Issue }
+  | { type: "SET_ACTIVE_ISSUE"; issueId: string | null }
   | { type: "SET_CHANNEL"; channel: string }
   | { type: "ADD_MESSAGE"; message: ChatMessage;};
   
@@ -29,8 +44,9 @@ type Action =
 const initialState: State = {
   channels: [],
   activeChannel: "",
-  messages: [
-  ],
+  messages: [],
+  issues: [],
+  activeIssueId: null,
 };
   
 const colorMap: Record<MessageType, string> = {
@@ -43,15 +59,25 @@ const colorMap: Record<MessageType, string> = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SET_CHANNEL":
-      if (action.channel === state.activeChannel) return state;
-      return { ...state, activeChannel: action.channel };
+      if (action.channel === state.activeChannel) return state; // No change
+      // When channel changes, clear the active issue
+      return { ...state, activeChannel: action.channel, activeIssueId: null };
     case "SET_CHANNELS":
       return {
         ...state,
         channels: action.channels,
         activeChannel: state.activeChannel || action.channels[0] || "",
       };
+    case "SET_ISSUES":
+      return { ...state, issues: action.issues };
+    case "ADD_ISSUE":
+      if (state.issues.some(i => i.id === action.issue.id)) return state;
+      return { ...state, issues: [...state.issues, action.issue] };
+    case "SET_ACTIVE_ISSUE":
+      return { ...state, activeIssueId: action.issueId };
     case "ADD_MESSAGE":
+      // Prevent duplicate messages if we fetch and get from SignalR
+      if (state.messages.some(m => m.id === action.message.id)) return state;
       return { ...state, messages: [...state.messages, action.message] };
     default:
       return state;
@@ -64,7 +90,7 @@ function parseCommand(input: string): { type: MessageType; text: string } | null
   const [cmd, ...rest] = input.slice(1).split(" ");
   const text = rest.join(" ");
 
-  const typeMap: Record<string, MessageType> = {
+  const typeMap: Record<string, MessageType | undefined> = {
     obs: "observation",
     bes: "beslut",
     upp: "uppdatering",
@@ -81,20 +107,14 @@ export default function EmergencyChat() {
   const [input, setInput] = useState("");
   const connectionRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
-  const visibleMessages = state.messages.filter(
-    (m) => m.channel === state.activeChannel
-  );
+
   // Effect to manage the SignalR connection
   useEffect(() => {
-    if (!state.activeChannel) {
-      return;
-    }
-
     const initConnection = async () => {
       try {
         const conn = await createConnection();
         connectionRef.current = conn;
+
         if (connectionRef.current.state === "Disconnected") {
           await conn.start();
           console.log("SignalR connected");
@@ -115,60 +135,65 @@ export default function EmergencyChat() {
         connectionRef.current.off("ReceiveMessage");
       }
     };
-  }, [state.activeChannel]);
+  }, []); // Run only once
 
   useEffect(() => {
-    const fetchChannels = async () => {
+    const fetchInitialData = async () => {
       try {
-        const res = await fetch(`${adress}channels`); //TODO: Move to config
-        if (!res.ok) {
-          throw new Error(`Failed to fetch channels: ${res.status} ${res.statusText}`);
-        }
-        const channels = await res.json();
+        // Fetch all initial data in parallel
+        const [channelsRes, issuesRes] = await Promise.all([
+          fetch(`${adress}channels`),
+          fetch(`${adress}issue`), // Assumes GET /api/issue returns Issue[]
+          // fetch(`${adress}messages`) // Assumes GET /api/messages returns ChatMessage[]
+        ]);
+
+        if (!channelsRes.ok) throw new Error(`Failed to fetch channels: ${channelsRes.statusText}`);
+        if (!issuesRes.ok) throw new Error(`Failed to fetch issues: ${issuesRes.statusText}`);
+        // if (!messagesRes.ok) throw new Error(`Failed to fetch messages: ${messagesRes.statusText}`);
+
+        const channels = await channelsRes.json();
+        const issues: Issue[] = await issuesRes.json();
+        // const messages: ChatMessage[] = await messagesRes.json();
+
         dispatch({ type: "SET_CHANNELS", channels });
+        dispatch({ type: "SET_ISSUES", issues });
+        // messages.forEach((message) => {
+          // dispatch({ type: "ADD_MESSAGE", message });
+        // });
+
       } catch (e) {
-        console.error("Failed to fetch channels: ", e);
+        console.error("Failed to fetch initial data: ", e);
       }
     };
 
-    fetchChannels();
+    fetchInitialData();
   }, []);
 
-  useEffect(() => {
-    const fetchIssues = async () => {
-      try {
-        const res = await fetch(`${adress}issue`);
-        if (!res.ok) {
-          throw new Error(`Failed to fetch issues: ${res.status} ${res.statusText}`);
-        }
-        const issues: ChatMessage[] = await res.json();
-        issues.forEach((issue) => {
-          dispatch({ type: "ADD_MESSAGE", message: issue });
-        });
-      } catch (e) {
-        console.error("Failed to fetch issues: ", e);
-      }
-    };
-
-    fetchIssues();
-  }, []);
-
-
-  function handleSubmit(e: SubmitEvent) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!state.activeIssueId) {
+      alert("Please select an issue card to send a message.");
+      return;
+    }
     const command = parseCommand(input);
     if (command) {
-      connectionRef.current?.invoke("SendMessage", command.type, command.text, state.activeChannel);
+      connectionRef.current?.invoke(
+        "SendMessage",
+        command.type,
+        command.text,
+        state.activeChannel,
+        state.activeIssueId
+      );
     }
     setInput("");
   }
 
   return (
     <div className="flex h-screen bg-zinc-900 text-zinc-100 font-mono">
+      {/* The left side */}
       <aside className="w-56 border-r border-zinc-700 p-3">
         <div className="mb-3 flex justify-between items-center">
           <span className="text-orange-400 font-bold">EMBER</span>
-
         </div>
         {state.channels.map((ch) => (
           <div
@@ -189,37 +214,75 @@ export default function EmergencyChat() {
           </div>
         ))}
       </aside>
+
+      {/* The right side */}
       <main className="flex flex-col flex-1">
+
+        {/* Channel header */}
         <div className="border-b border-zinc-700 px-4 py-2 font-bold">
           {state.activeChannel}
           <button
-            onClick={async () => {
+            onClick={async (e: MouseEvent<HTMLButtonElement>) => {
+              e.stopPropagation();
               const title = prompt("Ärende-namn:");
               if (!title) return;
 
-              await fetch(`${adress}issue`, {
+              const response = await fetch(`${adress}issue`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ title })
+                body: JSON.stringify({ title, channel: state.activeChannel })
               });
+
+              if (response.ok) {
+                const text = await response.text();
+                if (text) {
+                  const newIssue: Issue = JSON.parse(text);
+                  dispatch({ type: "ADD_ISSUE", issue: newIssue });
+                  dispatch({ type: "SET_ACTIVE_ISSUE", issueId: newIssue.id });
+                }
+              } else {
+                alert("Failed to create issue.");
+              }
             }} className="text-xs bg-zinc-700 hover:bg-zinc-600 px-1 rounded"
           >
             + Nytt Ärende
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
-          {visibleMessages.map((m) => (
-            <div key={m.id} className={colorMap[m.type]}>
-              <span className="opacity-50 mr-2">
-                @{m.type}:
-              </span>
-              {m.text}
-            </div>
-          ))}
-        </div>
 
+        {/* Issue Flow */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {state.issues
+            .map((issue) => (
+              <div
+                key={issue.id}
+                className={`bg-zinc-800/50 rounded-lg p-4 cursor-pointer border-2 transition-colors ${
+                  state.activeIssueId === issue.id
+                    ? "border-orange-400 bg-zinc-800"
+                    : "border-transparent hover:border-zinc-700"
+                }`}
+                onClick={() => dispatch({ type: "SET_ACTIVE_ISSUE", issueId: issue.id })}
+              >
+                <h2 className="font-bold text-lg mb-2 text-zinc-300">{issue.title}</h2>
+                <div className="space-y-1 pl-2 border-l-2 border-zinc-700">
+                  {state.messages
+                    .filter((m) => m.issueId === issue.id)
+                    .sort((a, b) => a.timestamp - b.timestamp)
+                    .map((m) => (
+                      <div key={m.id} className={colorMap[m.type]}>
+                        <span className="opacity-50 mr-2">
+                          @{m.type}:
+                        </span>
+                        {m.text}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+        </div>
+          
+        {/* Input area */}
         <form
           onSubmit={handleSubmit}
           className="border-t border-zinc-700 p-2"
