@@ -1,12 +1,15 @@
 using WebApplication1;
 using Microsoft.EntityFrameworkCore;
 using Business.Data;
+using Business.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+builder.Services.AddTransient<IssueService>();
 
 // Configure Entity Framework with SQLite
 builder.Services.AddDbContext<EmberDbContext>(options =>
