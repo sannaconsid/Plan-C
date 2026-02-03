@@ -1,3 +1,4 @@
 <Solution>
-  <Project Path="WebApplication1.csproj" />
+  <Project Path="../Business/Business.csproj" Id="74add9ed-6f0d-4b5a-8112-9b39ba75c52f" />
+  <Project Path="EmberWebApi.csproj" />
 </Solution>

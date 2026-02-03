@@ -1,10 +1,20 @@
 using WebApplication1;
+using Microsoft.EntityFrameworkCore;
+using Business.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+// Configure Entity Framework with SQLite
+builder.Services.AddDbContext<EmberDbContext>(options =>
+{
+    //var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ember.db";
+    var connectionString = "Data Source=ember.db";
+    options.UseSqlite(connectionString);
+});
 
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
