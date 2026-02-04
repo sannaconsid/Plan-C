@@ -7,7 +7,7 @@ Plan-C is a full-stack web application developed as part of the KLIRR hackathon 
 
 It is intended to operate on a local network in a situation of crisis. The system will keep track of updates within different categories of issues. It will also help with an overview picture of what issues are currently active, which issues are completed, and when. Only management with a special USB device should be granted access to write new issues and interact with the system. The information will be open to view for anybody within the local network with a browser.
 
-The data can later be exported to PDF/A for archiving the events.
+The data can later be exported to the non destructive PDF/A for archiving the events.
 
 ## Architecture Overview
 
