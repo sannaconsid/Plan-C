@@ -7,6 +7,12 @@
   "newProjectRoot": "projects",
   "projects": {
     "ember": {
+      "i18n": { 
+        "sourceLocale":"en-US",
+        "locales": {
+            "sv-SE": "src/locales/messages.sv-SE.xlf"
+        }
+      },
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -20,6 +26,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "localize": ["sv-SE"],
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
@@ -31,6 +38,9 @@
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "polyfills": [
+              "@angular/localize/init"
             ]
           },
           "configurations": {

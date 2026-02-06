@@ -1,8 +1,9 @@
 <mat-drawer-container class="container" autosize>
-  <mat-drawer #drawer class="sidenav" mode="side" [opened]="true">
+  <!--<mat-drawer #drawer class="sidenav" mode="side" [opened]="true">
     <h1 class="title">{{ title() }}</h1>
   </mat-drawer>
-
+-->
+  <app-nav-bar></app-nav-bar>
   <div class="sidenav-content">
     <router-outlet></router-outlet>
   </div>

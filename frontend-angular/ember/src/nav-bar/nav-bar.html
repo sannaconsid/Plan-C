@@ -1,5 +1,14 @@
-  <mat-drawer #drawer class="example-sidenav" mode="side">
-    <p>Auto-resizing sidenav</p>
-      <p>Lorem, ipsum dolor sit amet consectetur.</p>
-      
+  <mat-drawer #drawer class="example-sidenav" mode="side" [opened]="true">
+     <h1 class="title">{{ title() }}</h1> 
+    <ul>
+      <mat-nav-list>
+        <a  mat-list-item routerLink="/Field" i18n>Field</a>
+      </mat-nav-list>
+      <mat-nav-list>
+        <a mat-list-item routerLink="/Coordination" i18n>Coordination</a>
+      </mat-nav-list>
+      <mat-nav-list>
+        <a mat-list-item routerLink="/Management" i18n>Management</a>
+      </mat-nav-list>
+    </ul>
   </mat-drawer>
